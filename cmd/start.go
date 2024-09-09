@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"TimeTrackr/boltDB"
+
 	"github.com/spf13/cobra"
 )
 
@@ -16,10 +18,11 @@ If a timer is currently running, it will automatically stop that timer and save 
 Use this command to accurately track the time spent on each activity throughout your day.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		// Create function for all these. They return a string to be printed to the user
-		// get ongoing task from db and tell user that a task is currently running
-		// if no ongoing task, create a task with intialized values, duration is 0 and endtime is 0
-		// If not error, return response to user
+		err := boltdb.StartTask(args[0])
+		if err != nil {
+			cmd.PrintErrln(err.Error())
+			return
+		}
 		cmd.Printf("Task %s started", args[0])
 	},
 }

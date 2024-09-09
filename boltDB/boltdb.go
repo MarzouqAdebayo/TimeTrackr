@@ -3,6 +3,7 @@ package boltdb
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -13,11 +14,35 @@ import (
 var fileName = "trackr.db"
 var bucketName = []byte("task")
 
-func SaveTask(task *Task) error {
+var ErrTaskNotFound = errors.New("task not found")
+var ErrBucketDoesNotExist = errors.New("bucket does not exist")
+
+func CreateBucket() error {
+	db := opendb()
+	defer db.Close()
+	updateErr := db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists(bucketName)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if updateErr != nil {
+		return updateErr
+	}
+	return nil
+}
+
+func opendb() *bolt.DB {
 	db, openErr := bolt.Open(fileName, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if openErr != nil {
 		log.Fatal(openErr)
 	}
+	return db
+}
+
+func SaveTask(task *Task) error {
+	db := opendb()
 	defer db.Close()
 	updateErr := db.Update(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists(bucketName)
@@ -42,10 +67,7 @@ func SaveTask(task *Task) error {
 }
 
 func GetTask(taskID string) (Task, error) {
-	db, openErr := bolt.Open(fileName, 0600, &bolt.Options{Timeout: 1 * time.Second})
-	if openErr != nil {
-		log.Fatal(openErr)
-	}
+	db := opendb()
 	defer db.Close()
 
 	var task Task
@@ -84,10 +106,7 @@ func GetTask(taskID string) (Task, error) {
 }
 
 func GetTaskByValue(taskStatus TaskStatus) (Task, error) {
-	db, openErr := bolt.Open(fileName, 0600, &bolt.Options{Timeout: 1 * time.Second})
-	if openErr != nil {
-		log.Fatal(openErr)
-	}
+	db := opendb()
 	defer db.Close()
 
 	var task Task
@@ -98,18 +117,18 @@ func GetTaskByValue(taskStatus TaskStatus) (Task, error) {
 		}
 		c := bucket.Cursor()
 		for k, v := c.First(); k != nil && bytes.Contains(v, []byte(taskStatus)); k, v = c.Next() {
-			fmt.Println(string(k), string(v))
+			// fmt.Println(string(k), string(v))
 			err := json.Unmarshal(v, &task)
 			if err != nil {
 				return err
 			}
 			return nil
 		}
-		return fmt.Errorf("Did not find any %s task", taskStatus)
+		return ErrTaskNotFound
 	})
 	if err != nil {
-		log.Fatal(err)
+		return task, err
 	}
-	fmt.Println(task)
+	// fmt.Println(task)
 	return task, nil
 }
