@@ -7,6 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var Source string
+
 var rootCmd = &cobra.Command{
 	Use:   "trackr",
 	Short: "trackr is a time tracking tool",
@@ -19,7 +21,7 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }

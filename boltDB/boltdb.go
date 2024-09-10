@@ -17,6 +17,12 @@ var bucketName = []byte("task")
 var ErrTaskNotFound = errors.New("task not found")
 var ErrBucketDoesNotExist = errors.New("bucket does not exist")
 
+type CustomErr string
+
+func (e CustomErr) Error() string {
+	return string(e)
+}
+
 func CreateBucket() error {
 	db := opendb()
 	defer db.Close()
@@ -41,13 +47,60 @@ func opendb() *bolt.DB {
 	return db
 }
 
+func TaskExists(taskName string) error {
+	db := opendb()
+	defer db.Close()
+
+	err := db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(bucketName)
+		if bucket == nil {
+			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
+		}
+		c := bucket.Cursor()
+		for k, v := c.First(); k != nil && bytes.Contains(v, []byte(taskName)); k, v = c.Next() {
+			return CustomErr(fmt.Sprintf("Task '%s' already exists, please provide a new task name", taskName))
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func OngoingExists() error {
+	db := opendb()
+	defer db.Close()
+
+	err := db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(bucketName)
+		if bucket == nil {
+			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
+		}
+		c := bucket.Cursor()
+		for k, v := c.First(); k != nil && bytes.Contains(v, []byte(TaskStatus(ONGOING))); k, v = c.Next() {
+			var task Task
+			err := json.Unmarshal(v, &task)
+			if err != nil {
+				return err
+			}
+			return CustomErr(fmt.Sprintf("Task '%s' is currently ongoing, stop/pause it before starting a new one", task.Name))
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func SaveTask(task *Task) error {
 	db := opendb()
 	defer db.Close()
 	updateErr := db.Update(func(tx *bolt.Tx) error {
-		bucket, err := tx.CreateBucketIfNotExists(bucketName)
-		if err != nil {
-			return err
+		bucket := tx.Bucket(bucketName)
+		if bucket == nil {
+			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
 		}
 		key := []byte(task.ID)
 		taskBuf, err := json.Marshal(task)
@@ -74,7 +127,7 @@ func GetTask(taskID string) (Task, error) {
 	err := db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(bucketName)
 		if bucket == nil {
-			return fmt.Errorf("Bucket %q not found!", bucketName)
+			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
 		}
 		key := []byte(taskID)
 		taskJson := bucket.Get(key)
@@ -113,11 +166,10 @@ func GetTaskByValue(taskStatus TaskStatus) (Task, error) {
 	err := db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(bucketName)
 		if bucket == nil {
-			return fmt.Errorf("Bucket %q not found!", bucketName)
+			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
 		}
 		c := bucket.Cursor()
 		for k, v := c.First(); k != nil && bytes.Contains(v, []byte(taskStatus)); k, v = c.Next() {
-			// fmt.Println(string(k), string(v))
 			err := json.Unmarshal(v, &task)
 			if err != nil {
 				return err
@@ -129,6 +181,5 @@ func GetTaskByValue(taskStatus TaskStatus) (Task, error) {
 	if err != nil {
 		return task, err
 	}
-	// fmt.Println(task)
 	return task, nil
 }

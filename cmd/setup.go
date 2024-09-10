@@ -11,8 +11,8 @@ func init() {
 }
 
 var setupCmd = &cobra.Command{
-	Use:   "start",
-	Short: "Initiate a new time-tracking session",
+	Use:   "setup",
+	Short: "Initiatialize TimeTrackr",
 	Long: `Starts a new time-tracking session for the specified task. 
 If a timer is currently running, it will automatically stop that timer and save its data before starting a new session for the provided task name. 
 Use this command to accurately track the time spent on each activity throughout your day.`,
@@ -23,7 +23,7 @@ Use this command to accurately track the time spent on each activity throughout 
 			cmd.PrintErrln(err.Error())
 			return
 		}
-		cmd.Printf("TimeTrackr setup complete!", args[0])
-		cmd.Help()
+		cmd.Printf("TimeTrackr setup complete!\n\n")
+		rootCmd.Help()
 	},
 }

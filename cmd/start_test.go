@@ -19,8 +19,15 @@ func TestStartCmd(t *testing.T) {
 			Short: startCmd.Short,
 			Run:   startCmd.Run,
 		}
+
 		testCmd.SetOut(&buf)
 		testCmd.SetArgs(args)
+		testCmd.Flags().StringP("category", "c", "miscellaneous", "group this task into a category")
+		ferr := testCmd.Flags().Set("category", "work")
+
+		if ferr != nil {
+			t.Errorf("unexpected error setting flag: %v", ferr)
+		}
 
 		err := testCmd.Execute()
 		if err != nil {
