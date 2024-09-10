@@ -26,3 +26,5 @@ go.work.sum
 
 # user
 .histfile
+trackr
+*.db
