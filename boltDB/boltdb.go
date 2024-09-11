@@ -23,6 +23,14 @@ func (e CustomErr) Error() string {
 	return string(e)
 }
 
+func opendb() *bolt.DB {
+	db, openErr := bolt.Open(fileName, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if openErr != nil {
+		log.Fatal(openErr)
+	}
+	return db
+}
+
 func CreateBucket() error {
 	db := opendb()
 	defer db.Close()
@@ -37,14 +45,6 @@ func CreateBucket() error {
 		return updateErr
 	}
 	return nil
-}
-
-func opendb() *bolt.DB {
-	db, openErr := bolt.Open(fileName, 0600, &bolt.Options{Timeout: 1 * time.Second})
-	if openErr != nil {
-		log.Fatal(openErr)
-	}
-	return db
 }
 
 func TaskExists(taskName string) error {
@@ -92,6 +92,76 @@ func OngoingExists() error {
 		return err
 	}
 	return nil
+}
+
+// FIX Create a once and for all gettask function that get a task based on different criteria
+func FindTasks(obj Task) ([]Task, error) {
+	db := opendb()
+	defer db.Close()
+
+	var matchingTasks []Task
+	err := db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(bucketName)
+		if bucket == nil {
+			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
+		}
+		c := bucket.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			var task Task
+			err := json.Unmarshal(v, &task)
+			if err != nil {
+				return err
+			}
+			if (obj.Name == "" || task.Name == obj.Name) &&
+				(obj.Category == "" || task.Category == obj.Category) &&
+				(obj.Status == "" || task.Status == obj.Status) {
+				matchingTasks = append(matchingTasks, task)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return matchingTasks, err
+	}
+	if len(matchingTasks) == 0 {
+		return nil, ErrTaskNotFound
+	}
+	return matchingTasks, nil
+}
+
+func FilterTasks(startDate, endDate *time.Time, minDuration, maxDuration *int64) ([]Task, error) {
+	db := opendb()
+	defer db.Close()
+
+	var matchingTasks []Task
+	err := db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(bucketName)
+		if bucket == nil {
+			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
+		}
+		c := bucket.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			var task Task
+			err := json.Unmarshal(v, &task)
+			if err != nil {
+				return err
+			}
+			if (startDate == nil || task.StartTime >= startDate.Unix()) &&
+				(endDate == nil || task.EndTime <= endDate.Unix()) &&
+				(minDuration == nil || task.Duration >= *minDuration) &&
+				(maxDuration == nil || task.Duration <= *maxDuration) {
+				matchingTasks = append(matchingTasks, task)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return matchingTasks, err
+	}
+	if len(matchingTasks) == 0 {
+		return nil, ErrTaskNotFound
+	}
+	return matchingTasks, nil
 }
 
 func SaveTask(task *Task) error {

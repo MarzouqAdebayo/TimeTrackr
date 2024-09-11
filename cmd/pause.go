@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"strings"
+	boltdb "TimeTrackr/boltDB"
 
 	"github.com/spf13/cobra"
 )
@@ -18,6 +18,11 @@ var pauseCmd = &cobra.Command{
 Use this command to accurately track the time spent on each activity throughout your day.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Printf("Echo: %s", strings.Join(args, " "))
+		msg, err := boltdb.PauseCurrentTask()
+		if err != nil {
+			cmd.Println(err.Error())
+			return
+		}
+		cmd.Println(msg)
 	},
 }

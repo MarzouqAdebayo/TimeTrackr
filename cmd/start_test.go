@@ -15,9 +15,9 @@ func TestStartCmd(t *testing.T) {
 		want := "Task " + args[0] + " started"
 
 		testCmd := &cobra.Command{
-			Use:   startCmd.Use,
-			Short: startCmd.Short,
-			Run:   startCmd.Run,
+			Use:   continueCmd.Use,
+			Short: continueCmd.Short,
+			Run:   continueCmd.Run,
 		}
 
 		testCmd.SetOut(&buf)

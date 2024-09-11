@@ -14,17 +14,17 @@ func TestStartTask(t *testing.T) {
 
 func TestStopCurrentTask(t *testing.T) {
 	t.Run("Stops currently running task", func(t *testing.T) {
-		err := StopCurrentTask()
+		_, err := StopCurrentTask()
 
 		if err != nil {
-			t.Error("Error stopping current task")
+			t.Error(err.Error())
 		}
 	})
 }
 
 func TestTaskStatus(t *testing.T) {
 	t.Run("Get the status of the currently running task", func(t *testing.T) {
-		_, err := Status()
+		_, err := Status("ongoing")
 
 		if err != nil {
 			// t.Error("Error: Could not fetch task status")

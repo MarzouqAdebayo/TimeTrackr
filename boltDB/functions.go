@@ -69,12 +69,19 @@ func PauseCurrentTask() (string, error) {
 	return formatTaskStatus(task), nil
 }
 
-func ContinuePausedTask(taskName string) (string, error) {
-	return "", nil
+func ContinuePausedTask(taskName string) error {
+	taskObj := Task{
+		Name:   taskName,
+		Status: TaskStatus(PAUSED),
+	}
+	tasks, err := FindTasks(taskObj)
+	if err != nil {
+		return err
+	}
+	task := tasks[0]
+	task.Status = ONGOING
+	return SaveTask(&task)
 }
-
-//FIX Create a once and for all gettask function that get a task based on different criteria
-func FindTask() {}
 
 func formatTaskStatus(task Task) string {
 	startTime := time.Unix(task.StartTime, 0).Format("2006-01-02 15:04:05")
@@ -87,7 +94,7 @@ func formatTaskStatus(task Task) string {
 	if strings.Compare(string(task.Status), string(TaskStatus(ONGOING))) == 0 {
 		duration = time.Now().Unix() - task.StartTime
 	} else if strings.Compare(string(task.Status), string(TaskStatus(PAUSED))) == 0 {
-		duration = task.Duration + time.Now().Unix() - task.StartTime
+		duration = task.Duration
 	} else {
 		duration = task.EndTime - task.StartTime
 	}
