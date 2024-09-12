@@ -9,7 +9,7 @@ const (
 )
 
 type Task struct {
-	ID        string     `json:"id"`
+	ID        int        `json:"id,string"`
 	Name      string     `json:"name"`
 	Category  string     `json:"category"`
 	StartTime int64      `json:"startTime"`

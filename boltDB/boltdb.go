@@ -2,6 +2,7 @@ package boltdb
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -47,6 +48,7 @@ func CreateBucket() error {
 	return nil
 }
 
+// TODO test boltdb byte sorted order for latest tasks etc
 func TaskExists(taskName string) error {
 	db := opendb()
 	defer db.Close()
@@ -94,7 +96,6 @@ func OngoingExists() error {
 	return nil
 }
 
-// FIX Create a once and for all gettask function that get a task based on different criteria
 func FindTasks(obj Task) ([]Task, error) {
 	db := opendb()
 	defer db.Close()
@@ -129,7 +130,7 @@ func FindTasks(obj Task) ([]Task, error) {
 	return matchingTasks, nil
 }
 
-func FilterTasks(startDate, endDate *time.Time, minDuration, maxDuration *int64) ([]Task, error) {
+func FilterTasks(startDate, endDate *int64, minDuration, maxDuration *int64) ([]Task, error) {
 	db := opendb()
 	defer db.Close()
 
@@ -146,8 +147,8 @@ func FilterTasks(startDate, endDate *time.Time, minDuration, maxDuration *int64)
 			if err != nil {
 				return err
 			}
-			if (startDate == nil || task.StartTime >= startDate.Unix()) &&
-				(endDate == nil || task.EndTime <= endDate.Unix()) &&
+			if (startDate == nil || task.StartTime >= *startDate) &&
+				(endDate == nil || task.EndTime <= *endDate) &&
 				(minDuration == nil || task.Duration >= *minDuration) &&
 				(maxDuration == nil || task.Duration <= *maxDuration) {
 				matchingTasks = append(matchingTasks, task)
@@ -172,11 +173,15 @@ func SaveTask(task *Task) error {
 		if bucket == nil {
 			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
 		}
-		key := []byte(task.ID)
+
+		id, _ := bucket.NextSequence()
+		task.ID = int(id)
+
 		taskBuf, err := json.Marshal(task)
 		if err != nil {
 			return err
 		}
+		key := []byte(itob(task.ID))
 		err = bucket.Put(key, taskBuf)
 		if err != nil {
 			return err
@@ -189,7 +194,7 @@ func SaveTask(task *Task) error {
 	return nil
 }
 
-func GetTask(taskID string) (Task, error) {
+func GetTask(taskID int) (Task, error) {
 	db := opendb()
 	defer db.Close()
 
@@ -199,7 +204,7 @@ func GetTask(taskID string) (Task, error) {
 		if bucket == nil {
 			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
 		}
-		key := []byte(taskID)
+		key := itob(taskID)
 		taskJson := bucket.Get(key)
 		if taskJson == nil {
 			return nil
@@ -209,16 +214,6 @@ func GetTask(taskID string) (Task, error) {
 		if err != nil {
 			return err
 		}
-		// fmt.Println(task)
-		// bucket.ForEach(func(k, v []byte) error {
-		// 	t := &Task{}
-		// 	err := json.Unmarshal(v, &t)
-		// 	if err != nil {
-		// 		return nil
-		// 	}
-		// 	fmt.Printf("key=%s, value=%v with time=%v\n", k, t, t.StartTime)
-		// 	return nil
-		// })
 
 		return nil
 	})
@@ -252,4 +247,10 @@ func GetTaskByValue(taskStatus TaskStatus) (Task, error) {
 		return task, err
 	}
 	return task, nil
+}
+
+func itob(v int) []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(v))
+	return b
 }

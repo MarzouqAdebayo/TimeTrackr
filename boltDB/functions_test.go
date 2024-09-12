@@ -1,6 +1,9 @@
 package boltdb
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestStartTask(t *testing.T) {
 	t.Run("Creates new task", func(t *testing.T) {
@@ -29,5 +32,10 @@ func TestTaskStatus(t *testing.T) {
 		if err != nil {
 			// t.Error("Error: Could not fetch task status")
 		}
+	})
+}
+
+func TestReportGen(t *testing.T) {
+	t.Run("Get status generation report", func(t *testing.T) {
 	})
 }
