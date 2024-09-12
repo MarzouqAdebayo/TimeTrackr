@@ -7,8 +7,8 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(continueCmd)
-	continueCmd.Flags().StringP("category", "c", "miscellaneous", "group this task into a category.")
+	rootCmd.AddCommand(startCmd)
+	startCmd.Flags().StringP("category", "c", "miscellaneous", "group this task into a category.")
 }
 
 var startCmd = &cobra.Command{
