@@ -1,7 +1,6 @@
 package boltdb
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
@@ -48,28 +47,6 @@ func CreateBucket() error {
 	return nil
 }
 
-// TODO test boltdb byte sorted order for latest tasks etc
-func TaskExists(taskName string) error {
-	db := opendb()
-	defer db.Close()
-
-	err := db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(bucketName)
-		if bucket == nil {
-			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
-		}
-		c := bucket.Cursor()
-		for k, v := c.First(); k != nil && bytes.Contains(v, []byte(taskName)); k, v = c.Next() {
-			return CustomErr(fmt.Sprintf("Task '%s' already exists, please provide a new task name", taskName))
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func OngoingExists() error {
 	db := opendb()
 	defer db.Close()
@@ -80,13 +57,15 @@ func OngoingExists() error {
 			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
 		}
 		c := bucket.Cursor()
-		for k, v := c.First(); k != nil && bytes.Contains(v, []byte(TaskStatus(ONGOING))); k, v = c.Next() {
+		for k, v := c.First(); k != nil; k, v = c.Next() {
 			var task Task
 			err := json.Unmarshal(v, &task)
 			if err != nil {
 				return err
 			}
-			return CustomErr(fmt.Sprintf("Task '%s' is currently ongoing, stop/pause it before starting a new one", task.Name))
+			if task.Status == TaskStatus(ONGOING) {
+				return CustomErr(fmt.Sprintf("Task '%s' is currently ongoing, stop/pause it before starting a new one", task.Name))
+			}
 		}
 		return nil
 	})
@@ -124,10 +103,90 @@ func FindTasks(obj Task) ([]Task, error) {
 	if err != nil {
 		return matchingTasks, err
 	}
-	if len(matchingTasks) == 0 {
-		return nil, ErrTaskNotFound
-	}
 	return matchingTasks, nil
+}
+
+func SaveTask(task *Task) error {
+	db := opendb()
+	defer db.Close()
+	updateErr := db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(bucketName)
+		if bucket == nil {
+			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
+		}
+
+		id, _ := bucket.NextSequence()
+		task.ID = int(id)
+
+		taskBuf, err := json.Marshal(task)
+		if err != nil {
+			return err
+		}
+		key := []byte(itob(task.ID))
+		err = bucket.Put(key, taskBuf)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if updateErr != nil {
+		log.Fatal(updateErr)
+	}
+	return nil
+}
+
+func UpdateTask(task *Task) error {
+	db := opendb()
+	defer db.Close()
+	updateErr := db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(bucketName)
+		if bucket == nil {
+			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
+		}
+
+		taskBuf, err := json.Marshal(task)
+		if err != nil {
+			return err
+		}
+		key := []byte(itob(task.ID))
+		err = bucket.Put(key, taskBuf)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if updateErr != nil {
+		log.Fatal(updateErr)
+	}
+	return nil
+}
+
+func GetTask(taskID int) (Task, error) {
+	db := opendb()
+	defer db.Close()
+
+	var task Task
+	err := db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(bucketName)
+		if bucket == nil {
+			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
+		}
+		key := itob(taskID)
+		taskJson := bucket.Get(key)
+		if taskJson == nil {
+			return ErrTaskNotFound
+		}
+
+		err := json.Unmarshal(taskJson, &task)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return Task{}, err
+	}
+	return task, nil
 }
 
 func FilterTasks(startDate, endDate *int64, minDuration, maxDuration *int64) ([]Task, error) {
@@ -163,90 +222,6 @@ func FilterTasks(startDate, endDate *int64, minDuration, maxDuration *int64) ([]
 		return nil, ErrTaskNotFound
 	}
 	return matchingTasks, nil
-}
-
-func SaveTask(task *Task) error {
-	db := opendb()
-	defer db.Close()
-	updateErr := db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(bucketName)
-		if bucket == nil {
-			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
-		}
-
-		id, _ := bucket.NextSequence()
-		task.ID = int(id)
-
-		taskBuf, err := json.Marshal(task)
-		if err != nil {
-			return err
-		}
-		key := []byte(itob(task.ID))
-		err = bucket.Put(key, taskBuf)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if updateErr != nil {
-		log.Fatal(updateErr)
-	}
-	return nil
-}
-
-func GetTask(taskID int) (Task, error) {
-	db := opendb()
-	defer db.Close()
-
-	var task Task
-	err := db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(bucketName)
-		if bucket == nil {
-			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
-		}
-		key := itob(taskID)
-		taskJson := bucket.Get(key)
-		if taskJson == nil {
-			return nil
-		}
-
-		err := json.Unmarshal(taskJson, &task)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-	return task, nil
-}
-
-func GetTaskByValue(taskStatus TaskStatus) (Task, error) {
-	db := opendb()
-	defer db.Close()
-
-	var task Task
-	err := db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(bucketName)
-		if bucket == nil {
-			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
-		}
-		c := bucket.Cursor()
-		for k, v := c.First(); k != nil && bytes.Contains(v, []byte(taskStatus)); k, v = c.Next() {
-			err := json.Unmarshal(v, &task)
-			if err != nil {
-				return err
-			}
-			return nil
-		}
-		return ErrTaskNotFound
-	})
-	if err != nil {
-		return task, err
-	}
-	return task, nil
 }
 
 func itob(v int) []byte {

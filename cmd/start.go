@@ -25,6 +25,6 @@ Use this command to accurately track the time spent on each activity throughout 
 			cmd.PrintErrln(err.Error())
 			return
 		}
-		cmd.Printf("A new time tracking session started for task %s", args[0])
+		cmd.Printf("A new time tracking session started for task %s\n", args[0])
 	},
 }

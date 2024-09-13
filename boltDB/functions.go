@@ -1,9 +1,14 @@
 package boltdb
 
 import (
-	"errors"
 	"fmt"
+	"strings"
 	"time"
+)
+
+const (
+	NO_ONGOING_ERR_MSG = "No ongoing time tracking session"
+	NO_PAUSED_ERR_MSG  = "No paused time tracking session"
 )
 
 func Setup() error {
@@ -19,6 +24,7 @@ func StartTask(taskName string, category string) error {
 		Name:      taskName,
 		Category:  category,
 		StartTime: time.Now().Unix(),
+		UpdatedAt: time.Now().Unix(),
 		Status:    TaskStatus(ONGOING),
 	}
 	saveErr := SaveTask(newTask)
@@ -28,53 +34,102 @@ func StartTask(taskName string, category string) error {
 	return nil
 }
 
-func StopCurrentTask() (string, error) {
-	task, err := GetTaskByValue(TaskStatus(ONGOING))
-	if err != nil && errors.Is(err, ErrTaskNotFound) {
-		return "", fmt.Errorf("No ongoing task")
+func StopCurrentTask(taskID *int) (string, error) {
+	var task Task
+	if taskID != nil {
+		item, err := GetTask(*taskID)
+		if err != nil {
+			return "", err
+		}
+		task = item
+	} else {
+		filterObj := Task{Status: TaskStatus(ONGOING)}
+		tasks, err := FindTasks(filterObj)
+		if err != nil {
+			return "", err
+		}
+		if len(tasks) == 0 {
+			return "", fmt.Errorf(NO_ONGOING_ERR_MSG)
+		}
+		if len(tasks) > 1 {
+			return "These are currently ongoing tasks, pass the ID of the task you want to stop to the stop command using the --id or -i flag\n" + FormatTasksNamesAndIDs(tasks), nil
+		}
+		task = tasks[0]
 	}
-	if err != nil {
-		return "", err
+	if strings.Compare(string(task.Status), string(TaskStatus(ONGOING))) == 0 {
+		task.Duration += time.Now().Unix() - task.UpdatedAt
 	}
+	task.UpdatedAt = time.Now().Unix()
 	task.EndTime = time.Now().Unix()
 	task.Status = TaskStatus(COMPLETED)
-	saveErr := SaveTask(&task)
+	saveErr := UpdateTask(&task)
 	if saveErr != nil {
-		return "", err
+		return "", saveErr
 	}
 	return FormatTaskStatus(task), nil
 }
 
-func PauseCurrentTask() (string, error) {
-	task, err := GetTaskByValue(TaskStatus(ONGOING))
-	if err != nil && errors.Is(err, ErrTaskNotFound) {
-		return "", fmt.Errorf("No ongoing task")
-	}
-	if err != nil {
-		return "", err
+func PauseCurrentTask(taskID *int) (string, error) {
+	var task Task
+	if taskID != nil {
+		item, err := GetTask(*taskID)
+		if err != nil {
+			return "", err
+		}
+		task = item
+	} else {
+
+		filterObj := Task{Status: TaskStatus(ONGOING)}
+		tasks, err := FindTasks(filterObj)
+		if err != nil {
+			return "", err
+		}
+		if len(tasks) == 0 {
+			return "", fmt.Errorf(NO_ONGOING_ERR_MSG)
+		}
+		if len(tasks) > 1 {
+			return "These are currently ongoing tasks, pass the ID of the task you want to pause to the pause command using the --id or -i flag\n" + FormatTasksNamesAndIDs(tasks), nil
+		}
+		task = tasks[0]
 	}
 	task.Status = TaskStatus(PAUSED)
-	task.Duration = task.Duration + time.Now().Unix() - task.StartTime
-	saveErr := SaveTask(&task)
+	task.Duration += time.Now().Unix() - task.UpdatedAt
+	task.UpdatedAt = time.Now().Unix()
+	saveErr := UpdateTask(&task)
 	if saveErr != nil {
-		return "", err
+		return "", saveErr
 	}
 	return FormatTaskStatus(task), nil
 }
 
-func ContinuePausedTask(taskName string) error {
-	taskObj := Task{
-		Name:   taskName,
-		Status: TaskStatus(PAUSED),
+func ContinuePausedTask(taskName *string, taskID *int) (string, error) {
+	var task Task
+	if taskID != nil {
+		item, err := GetTask(*taskID)
+		if err != nil {
+			return "", err
+		}
+		task = item
+	} else {
+		filterObj := Task{
+			Name:   *taskName,
+			Status: TaskStatus(PAUSED),
+		}
+		tasks, err := FindTasks(filterObj)
+		if err != nil {
+			return "", err
+		}
+		if len(tasks) == 0 {
+			return "", fmt.Errorf("%s with the name '%s'\n", NO_PAUSED_ERR_MSG, *taskName)
+		}
+		if len(tasks) > 1 {
+			return "These are currently paused tasks, pass the ID of the task you want to continue to the continue command using the --id or -i flag\n" + FormatTasksNamesAndIDs(tasks), nil
+		}
+		task = tasks[0]
 	}
-	tasks, err := FindTasks(taskObj)
-	if err != nil {
-		return err
-	}
-	// BUG if len > 1, return to user and ask them to pass the ID instead
-	task := tasks[0]
+	task.UpdatedAt = time.Now().Unix()
 	task.Status = ONGOING
-	return SaveTask(&task)
+	return "", UpdateTask(&task)
 }
 
 func Status(status string) (string, error) {
@@ -83,11 +138,17 @@ func Status(status string) (string, error) {
 		"completed": TaskStatus(COMPLETED),
 		"paused":    TaskStatus(PAUSED),
 	}
-	task, err := GetTaskByValue(statusMap[status])
+	filterObj := Task{
+		Status: statusMap[status],
+	}
+	tasks, err := FindTasks(filterObj)
 	if err != nil {
 		return "", err
 	}
-	return FormatTaskStatus(task), nil
+	if len(tasks) == 0 {
+		return fmt.Sprintf("There are no %s tasks\n", status), nil
+	}
+	return FormatMultipleTaskStatus(tasks), nil
 }
 
 func GenerateReport(startDate, endDate int64) (string, error) {

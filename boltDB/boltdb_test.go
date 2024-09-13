@@ -19,7 +19,7 @@ func TestSetupTask(t *testing.T) {
 func TestFindTasks(t *testing.T) {
 	t.Run("Test if it finds task with passed non-id params", func(t *testing.T) {
 		test := Task{
-			ID:       "000001",
+			ID:       1,
 			Name:     "bowling",
 			Category: "sports",
 		}

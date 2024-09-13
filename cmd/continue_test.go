@@ -7,15 +7,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func TestStopCmd(t *testing.T) {
-	t.Run("stop - Should print appropriate command when passed", func(t *testing.T) {
+func TestContinueCmd(t *testing.T) {
+	t.Run("continue - Should print appropriate command when passed", func(t *testing.T) {
 		buf := bytes.Buffer{}
 		args := []string{"task1"}
 
 		testCmd := &cobra.Command{
-			Use:   stopCmd.Use,
-			Short: stopCmd.Short,
-			Run:   stopCmd.Run,
+			Use:   continueCmd.Use,
+			Short: continueCmd.Short,
+			Run:   continueCmd.Run,
 		}
 		testCmd.SetOut(&buf)
 		testCmd.SetArgs(args)

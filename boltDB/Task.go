@@ -13,6 +13,7 @@ type Task struct {
 	Name      string     `json:"name"`
 	Category  string     `json:"category"`
 	StartTime int64      `json:"startTime"`
+	UpdatedAt int64      `json:"updatedAt"`
 	EndTime   int64      `json:"endTime"`
 	Duration  int64      `json:"duration"`
 	Status    TaskStatus `json:"status"`

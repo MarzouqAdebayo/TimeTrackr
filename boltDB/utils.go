@@ -160,6 +160,14 @@ func MostFrequentTaskName(tasks []Task) []TaskFreq {
 func FindLongestStreak() string               { return "" }
 func FindFirstAndLastTasks() (string, string) { return "", "" }
 
+func FormatMultipleTaskStatus(tasks []Task) string {
+	result := ""
+	for _, task := range tasks {
+		result += FormatTaskStatus(task)
+	}
+	return result
+}
+
 func FormatTaskStatus(task Task) string {
 	startTime := time.Unix(task.StartTime, 0).Format("2006-01-02 15:04:05")
 	endTime := "N/A"
@@ -169,32 +177,50 @@ func FormatTaskStatus(task Task) string {
 
 	var duration int64
 	if strings.Compare(string(task.Status), string(TaskStatus(ONGOING))) == 0 {
-		duration = time.Now().Unix() - task.StartTime
+		duration = task.Duration + time.Now().Unix() - task.UpdatedAt
 	} else if strings.Compare(string(task.Status), string(TaskStatus(PAUSED))) == 0 {
 		duration = task.Duration
 	} else {
-		duration = task.EndTime - task.StartTime
+		duration = task.Duration
 	}
 
-	return fmt.Sprintf(
-		"\nTask Status:\n"+
-			"---------------------------------\n"+
-			"ID        : %s\n"+
-			"Name      : %s\n"+
-			"Category  : %s\n"+
-			"Status    : %s\n"+
-			"Start Time: %s\n"+
-			"End Time  : %s\n"+
-			"Duration  : %d seconds\n"+
-			"---------------------------------\n",
+	return fmt.Sprintf("\nTask Status:\n"+
+		"---------------------------------\n"+
+		"ID        : %d\n"+
+		"Name      : %s\n"+
+		"Category  : %s\n"+
+		"Status    : %s\n"+
+		"Start Time: %s\n"+
+		"End Time  : %s\n"+
+		"Duration  : %s\n"+
+		"---------------------------------\n",
 		task.ID,
 		task.Name,
 		task.Category,
 		task.Status,
 		startTime,
 		endTime,
-		duration,
+		FormatDuration(duration),
 	)
+}
+
+func FormatTasksNamesAndIDs(tasks []Task) string {
+	result := ""
+	for _, task := range tasks {
+		result += fmt.Sprintf("\nTask Status:\n"+
+			"---------------------------------\n"+
+			"ID        : %d\n"+
+			"Name      : %s\n"+
+			"Category  : %s\n"+
+			"Status    : %s\n"+
+			"---------------------------------\n",
+			task.ID,
+			task.Name,
+			task.Category,
+			task.Status,
+		)
+	}
+	return result
 }
 
 func FormatTopCategories(items []CategoryDuration) string {
@@ -226,9 +252,10 @@ func FormatTopTaskName(items []TaskFreq) string {
 }
 
 func FormatDuration(d int64) string {
-	hours := int(time.Duration(d).Hours())
-	minutes := int(time.Duration(d).Minutes()) % 60
-	return fmt.Sprintf("%d hours %d minutes", hours, minutes)
+	hours := d / 3600
+	minutes := (d % 3600) / 60
+	seconds := d % 60
+	return fmt.Sprintf("%d hours %d minutes %d seconds", hours, minutes, seconds)
 }
 
 func FormatTimeByDay(m map[string]time.Duration) string  { return "" }

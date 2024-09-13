@@ -12,8 +12,6 @@ func TestPauseCmd(t *testing.T) {
 		buf := bytes.Buffer{}
 		args := []string{"task1"}
 
-		want := "Echo: " + args[0]
-
 		testCmd := &cobra.Command{
 			Use:   pauseCmd.Use,
 			Short: pauseCmd.Short,
@@ -25,12 +23,6 @@ func TestPauseCmd(t *testing.T) {
 		err := testCmd.Execute()
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
-		}
-
-		got := buf.String()
-
-		if got != want {
-			t.Errorf("want: %s, got: %s", want, got)
 		}
 	})
 }

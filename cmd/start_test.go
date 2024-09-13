@@ -12,12 +12,12 @@ func TestStartCmd(t *testing.T) {
 		buf := bytes.Buffer{}
 		args := []string{"task1"}
 
-		want := "Task " + args[0] + " started"
+		want := "A new time tracking session started for task " + args[0] + "\n"
 
 		testCmd := &cobra.Command{
-			Use:   continueCmd.Use,
-			Short: continueCmd.Short,
-			Run:   continueCmd.Run,
+			Use:   startCmd.Use,
+			Short: startCmd.Short,
+			Run:   startCmd.Run,
 		}
 
 		testCmd.SetOut(&buf)

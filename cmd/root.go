@@ -7,7 +7,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var Source string
+var (
+	Source  string
+	idVar   int
+	nameVar string
+	all     bool
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "trackr",
