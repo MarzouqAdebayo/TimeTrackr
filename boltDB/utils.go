@@ -26,25 +26,36 @@ func CalculateTotalTime(tasks []Task) int64 {
 	return total
 }
 
-func FindLongestAndShortestTasks(tasks []Task) (Task, Task) {
+func TopTasksByDuration(tasks []Task) string {
 	if len(tasks) == 0 {
-		return Task{}, Task{}
+		return ""
 	}
-	longest, shortest := tasks[0], tasks[0]
-	for _, task := range tasks {
-		if task.Duration > longest.Duration {
-			longest = task
+	slices.SortStableFunc(tasks, func(a, b Task) int {
+		if a.Duration < b.Duration {
+			return 1
+		} else if a.Duration > b.Duration {
+			return -1
 		}
-		if task.Duration < shortest.Duration {
-			shortest = task
+		return 0
+	})
+	result := "\n"
+	length := len(tasks)
+	for index, task := range tasks {
+		if index == 3 {
+			break
 		}
+		result += fmt.Sprintf("    %d. %s (%s): %s\n", index+1, task.Name, task.Category, FormatDuration(int64(task.Duration)))
 	}
-	return longest, shortest
+	if length > 4 {
+		result += "    ...\n"
+		result += fmt.Sprintf("    %d. %s (%s): %s", len(tasks), tasks[length-1].Name, tasks[length-1].Category, FormatDuration(int64(tasks[length-1].Duration)))
+	}
+	return result
 }
 
-func FindLongestAndShortestCategories(tasks []Task) (CategoryDuration, CategoryDuration, []CategoryDuration) {
+func TopCategoriesByDuration(tasks []Task) string {
 	if len(tasks) == 0 {
-		return CategoryDuration{}, CategoryDuration{}, nil
+		return ""
 	}
 	categories := make(map[string]int64)
 
@@ -56,36 +67,37 @@ func FindLongestAndShortestCategories(tasks []Task) (CategoryDuration, CategoryD
 		}
 	}
 
-	var longest, shortest CategoryDuration
 	var result []CategoryDuration
-	first := true
-
+	index := 0
 	for k, v := range categories {
+		if index > 2 {
+			break
+		}
+		index++
 		catMap := CategoryDuration{Name: k, Duration: v}
-		if first {
-			longest, shortest = catMap, catMap
-			first = false
-			continue
-		}
-		if v > longest.Duration {
-			longest = catMap
-		}
-		if v < shortest.Duration {
-			shortest = catMap
-		}
 		result = append(result, catMap)
-
-		slices.SortStableFunc(result, func(a, b CategoryDuration) int {
-			if a.Duration > b.Duration {
-				return 1
-			} else if a.Duration < b.Duration {
-				return -1
-			}
-			return 0
-		})
 	}
-
-	return longest, shortest, result
+	slices.SortStableFunc(result, func(a, b CategoryDuration) int {
+		if a.Duration < b.Duration {
+			return 1
+		} else if a.Duration > b.Duration {
+			return -1
+		}
+		return 0
+	})
+	report := "\n"
+	length := len(result)
+	for index, category := range result {
+		if index == 3 {
+			break
+		}
+		report += fmt.Sprintf("    %d. %s: %s\n", index+1, category.Name, FormatDuration(category.Duration))
+	}
+	if length > 4 {
+		report += "    ...\n"
+		report += fmt.Sprintf("    %d. %s: %s\n", index+1, result[length-1].Name, FormatDuration(result[length-1].Duration))
+	}
+	return report
 }
 
 func CalculateTaskCompletionStats(tasks []Task) (int, int, int) {
@@ -129,14 +141,10 @@ func AnalyzeTimeByHour(tasks []Task) map[string]time.Duration {
 	return result
 }
 
-func MostFrequentTaskName(tasks []Task) []TaskFreq {
+func MostFrequentTaskName(tasks []Task) string {
 
-	length := 3
-	if len(tasks) < 3 {
-		length = len(tasks)
-	}
 	freqMap := make(map[string]int)
-	for _, task := range tasks[:length] {
+	for _, task := range tasks {
 		freqMap[task.Name]++
 	}
 
@@ -146,19 +154,30 @@ func MostFrequentTaskName(tasks []Task) []TaskFreq {
 	}
 
 	slices.SortStableFunc(result, func(a, b TaskFreq) int {
-		if a.Freq > b.Freq {
+		if a.Freq < b.Freq {
 			return 1
-		} else if a.Freq < b.Freq {
+		} else if a.Freq > b.Freq {
 			return -1
 		}
 		return 0
 	})
 
-	return result
+	report := "\n"
+	length := len(result)
+	for index, category := range result {
+		if index == 3 {
+			break
+		}
+		report += fmt.Sprintf("    %d. %s: Tracked %d time(s)\n", index+1, category.Name, category.Freq)
+	}
+	if length > 4 {
+		report += "    ...\n"
+		report += fmt.Sprintf("    %d. %s: Tracked %d time(s)\n", length, result[length-1].Name, result[length-1].Freq)
+	}
+	return report
 }
 
-func FindLongestStreak() string               { return "" }
-func FindFirstAndLastTasks() (string, string) { return "", "" }
+func FindLongestStreak() string { return "" }
 
 func FormatMultipleTaskStatus(tasks []Task) string {
 	result := ""
@@ -231,7 +250,7 @@ func FormatTopCategories(items []CategoryDuration) string {
 	result := "\n"
 
 	for _, item := range items[:length] {
-		result += fmt.Sprintf("%s - %s", item.Name, FormatDuration(item.Duration))
+		result += fmt.Sprintf("\t%s - %s", item.Name, FormatDuration(item.Duration))
 	}
 	result += "\n"
 	return result
@@ -255,8 +274,36 @@ func FormatDuration(d int64) string {
 	hours := d / 3600
 	minutes := (d % 3600) / 60
 	seconds := d % 60
-	return fmt.Sprintf("%d hours %d minutes %d seconds", hours, minutes, seconds)
+
+	hourStr := "hours"
+	if hours == 1 {
+		hourStr = "hour"
+	}
+
+	minuteStr := "minutes"
+	if minutes == 1 {
+		minuteStr = "minute"
+	}
+
+	secondStr := "seconds"
+	if seconds == 1 {
+		secondStr = "second"
+	}
+
+	return fmt.Sprintf("%d %s %d %s %d %s", hours, hourStr, minutes, minuteStr, seconds, secondStr)
 }
 
-func FormatTimeByDay(m map[string]time.Duration) string  { return "" }
-func FormatTimeByHour(m map[string]time.Duration) string { return "" }
+func FormatTimeByDay(m map[string]time.Duration) string {
+	result := "\n"
+	for k, v := range m {
+		result += fmt.Sprintf("%s: %s\n", k, FormatDuration(int64(v)))
+	}
+	return result
+}
+func FormatTimeByHour(m map[string]time.Duration) string {
+	result := "\n"
+	for k, v := range m {
+		result += fmt.Sprintf("%s: %s\n", k, FormatDuration(int64(v)))
+	}
+	return result
+}

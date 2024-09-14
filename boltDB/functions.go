@@ -159,68 +159,43 @@ func GenerateReport(startDate, endDate int64) (string, error) {
 	// TODO use goroutines for all these function calls :)
 	totalTasks := len(tasks)
 	totalTimeSpent := CalculateTotalTime(tasks)
-	longestTask, shortestTask := FindLongestAndShortestTasks(tasks)
-	longestCategory, shortestCategory, topCategories := FindLongestAndShortestCategories(tasks)
+	topTasks := TopTasksByDuration(tasks)
+	topCategories := TopCategoriesByDuration(tasks)
 	completedTasks, ongoingTasks, pausedTasks := CalculateTaskCompletionStats(tasks)
-	timeByDay := AnalyzeTimeByDay(tasks)
-	timeByHour := AnalyzeTimeByHour(tasks)
-	mostFrequentTask := FormatTopTaskName(MostFrequentTaskName(tasks))
+	mostFrequentTasks := MostFrequentTaskName(tasks)
 	longestStreak := FindLongestStreak()
-	firstTask, lastTask := FindFirstAndLastTasks()
-	// Generate the report as a formatted string
+
 	report := fmt.Sprintf(`
 TimeTrackr Report: Detailed Analysis
 
 Overview:
-  Report Period: %s - %s
-  Total Tasks Tracked: %d
-  Total Time Spent: %s
+    Report Period: %s - %s
+    Total Tasks Tracked: %d
+    Total Time Spent: %s
 
-Top Tasks:
-  Task with Longest Duration: "%s" - %s (Category: %s)
-  Task with Shortest Duration: "%s" - %s (Category: %s)
-
-Category Analysis:
-  Category with Longest Total Duration: "%s" - %s
-  Category with Shortest Total Duration: "%s" - %s
-  Top 3 Most Time-Consuming Categories: %s
-
+Top Time Consuming Tasks:%s
+Top Time Consuming Categories:%s
 Task Completion Statistics:
-  Number of Completed Tasks: %d
-  Number of Ongoing Tasks: %d
-  Number of Paused Tasks: %d
-  Average Time Spent per Task: %s
-
-Time Distribution by Day:
-  %s
-
-Time Distribution by Hour:
-  %s
+    Number of Completed Tasks: %d
+    Number of Ongoing Tasks: %d
+    Number of Paused Tasks: %d
+    Average Time Spent per Task: %s
 
 Task Status Summary:
-  Percentage of Completed Tasks: %.2f%%
-  Percentage of Ongoing Tasks: %.2f%%
-  Percentage of Paused Tasks: %.2f%%
+    Percentage of Completed Tasks: %.2f%%
+    Percentage of Ongoing Tasks: %.2f%%
+    Percentage of Paused Tasks: %.2f%%
 
 Miscellaneous Insights:
-  Most Frequent Task Name: "%s" - Tracked %d times
-  Longest Streak of Task Tracking: "%s" - %d consecutive days
-  First Task of the Report Period: "%s" - Started at %s
-  Last Task of the Report Period: "%s" - Ended at %s
+    Most Frequent Task Name:%s
+    Longest Streak of Task Tracking: "%s" - %d consecutive days
 `,
 		time.Unix(startDate, 0).Format("Jan 2, 2006 3:04 PM"), time.Unix(endDate, 0).Format("Jan 2, 2006 3:04PM"),
 		totalTasks, FormatDuration(totalTimeSpent),
-		longestTask.Name, FormatDuration(longestTask.Duration), longestTask.Category,
-		shortestTask.Name, FormatDuration(shortestTask.Duration), shortestTask.Category,
-		longestCategory.Name, FormatDuration(longestCategory.Duration),
-		shortestCategory.Name, FormatDuration(shortestCategory.Duration),
-		FormatTopCategories(topCategories),
+		topTasks, topCategories,
 		completedTasks, ongoingTasks, pausedTasks, FormatDuration(totalTimeSpent/int64(totalTasks)),
-		FormatTimeByDay(timeByDay), FormatTimeByHour(timeByHour),
 		float64(completedTasks)/float64(totalTasks)*100, float64(ongoingTasks)/float64(totalTasks)*100, float64(pausedTasks)/float64(totalTasks)*100,
-		mostFrequentTask, 1,
-		longestStreak, 2,
-		firstTask, 3,
-		lastTask, 4)
+		mostFrequentTasks,
+		longestStreak, 2)
 	return report, nil
 }

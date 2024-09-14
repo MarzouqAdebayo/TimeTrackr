@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
 
@@ -19,6 +20,16 @@ var (
 	tdh          bool
 	misc         bool
 )
+
+// func print() {
+// 	var style = lipgloss.NewStyle().
+// 		Bold(true).
+// 		Foreground(lipgloss.Color("#FAFAFA")).
+// 		Background(lipgloss.Color("#7D56F4")).
+// 		PaddingTop(2).
+// 		PaddingLeft(4).
+// 		Width(22)
+// }
 
 func init() {
 	reportCmd.Flags().StringVar(&startDateStr, "startdate", "", "Start date for the report (e.g., 2024-09-01 or 2024-09-01 15:04:05)")
@@ -71,7 +82,13 @@ var reportCmd = &cobra.Command{
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-		cmd.Println(_report)
+		var style = lipgloss.NewStyle().
+			Bold(true).
+			// Background(lipgloss.Color("#FAFAFA")).
+			Foreground(lipgloss.Color("#7D56F4")).
+			PaddingTop(1).
+			PaddingLeft(4)
+		cmd.Println(style.Render(_report))
 	},
 }
 
