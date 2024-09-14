@@ -142,7 +142,6 @@ func AnalyzeTimeByHour(tasks []Task) map[string]time.Duration {
 }
 
 func MostFrequentTaskName(tasks []Task) string {
-
 	freqMap := make(map[string]int)
 	for _, task := range tasks {
 		freqMap[task.Name]++
@@ -242,34 +241,6 @@ func FormatTasksNamesAndIDs(tasks []Task) string {
 	return result
 }
 
-func FormatTopCategories(items []CategoryDuration) string {
-	length := 3
-	if len(items) < 3 {
-		length = len(items)
-	}
-	result := "\n"
-
-	for _, item := range items[:length] {
-		result += fmt.Sprintf("\t%s - %s", item.Name, FormatDuration(item.Duration))
-	}
-	result += "\n"
-	return result
-}
-
-func FormatTopTaskName(items []TaskFreq) string {
-	length := 3
-	if len(items) < 3 {
-		length = len(items)
-	}
-	result := "\n"
-
-	for _, item := range items[:length] {
-		result += fmt.Sprintf("%s - %d", item.Name, item.Freq)
-	}
-	result += "\n"
-	return result
-}
-
 func FormatDuration(d int64) string {
 	hours := d / 3600
 	minutes := (d % 3600) / 60
@@ -291,19 +262,4 @@ func FormatDuration(d int64) string {
 	}
 
 	return fmt.Sprintf("%d %s %d %s %d %s", hours, hourStr, minutes, minuteStr, seconds, secondStr)
-}
-
-func FormatTimeByDay(m map[string]time.Duration) string {
-	result := "\n"
-	for k, v := range m {
-		result += fmt.Sprintf("%s: %s\n", k, FormatDuration(int64(v)))
-	}
-	return result
-}
-func FormatTimeByHour(m map[string]time.Duration) string {
-	result := "\n"
-	for k, v := range m {
-		result += fmt.Sprintf("%s: %s\n", k, FormatDuration(int64(v)))
-	}
-	return result
 }
