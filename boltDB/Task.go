@@ -3,6 +3,10 @@ package boltdb
 type TaskStatus string
 
 const (
+	DEFAULT_CATEGORY = "miscellaneous"
+)
+
+const (
 	ONGOING   TaskStatus = "ongoing"
 	COMPLETED            = "completed"
 	PAUSED               = "paused"

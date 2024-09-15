@@ -7,7 +7,6 @@ import (
 )
 
 func init() {
-	pauseCmd.Flags().IntVar(&idVar, "id", 0, "")
 	rootCmd.AddCommand(pauseCmd)
 }
 
@@ -19,13 +18,7 @@ var pauseCmd = &cobra.Command{
 Use this command to accurately track the time spent on each activity throughout your day.`,
 	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		var msg string
-		var err error
-		if idVar <= 0 {
-			msg, err = boltdb.PauseCurrentTask(nil)
-		} else {
-			msg, err = boltdb.PauseCurrentTask(&idVar)
-		}
+		msg, err := boltdb.PauseCurrentTask(nil)
 		if err != nil {
 			cmd.Println(err.Error())
 			return

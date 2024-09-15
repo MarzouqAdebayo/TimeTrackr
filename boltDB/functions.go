@@ -1,15 +1,84 @@
 package boltdb
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 )
 
 const (
-	NO_ONGOING_ERR_MSG = "No ongoing time tracking session"
-	NO_PAUSED_ERR_MSG  = "No paused time tracking session"
+	NO_ONGOING_ERR_MSG       = "No ongoing time tracking session"
+	NO_PAUSED_ERR_MSG        = "No paused time tracking session"
+	NO_FILTER_RESULT_ERR_MSG = "No tasks matched the filters\n"
 )
+
+var ErrTaskFilterNotFound = errors.New(NO_FILTER_RESULT_ERR_MSG)
+
+type FilterObject struct {
+	Name        string
+	Category    string
+	Status      TaskStatus
+	StartDate   int64
+	EndDate     int64
+	MinDuration int64
+	MaxDuration int64
+}
+
+func NewFilterObject(filters ...interface{}) *FilterObject {
+	filterObj := &FilterObject{}
+	statusMap := map[string]TaskStatus{
+		"ongoing":   TaskStatus(ONGOING),
+		"completed": TaskStatus(COMPLETED),
+		"paused":    TaskStatus(PAUSED),
+	}
+
+	for i := 0; i < len(filters); i += 2 {
+		if i+1 >= len(filters) {
+			fmt.Println("Warning: Filter value for", filters[i], "is missing.")
+			break
+		}
+		key := filters[i]
+		value := filters[i+1]
+
+		switch key {
+		case "name":
+			if v, ok := value.(string); ok {
+				filterObj.Name = v
+			}
+		case "category":
+			if v, ok := value.(string); ok {
+				filterObj.Category = v
+			}
+		case "status":
+			if v, ok := value.(string); ok {
+				filterObj.Status = statusMap[v]
+			}
+		case "startDate":
+			if v, ok := value.(int64); ok {
+				filterObj.StartDate = v
+			}
+		case "endDate":
+			if v, ok := value.(int64); ok {
+				filterObj.EndDate = v
+			}
+		case "minDuration":
+			if v, ok := value.(int64); ok {
+				filterObj.MinDuration = v
+			}
+		case "maxDuration":
+			if v, ok := value.(int64); ok {
+				filterObj.MaxDuration = v
+			}
+		default:
+			log.Fatalf("Warning: Unknown filter key", key)
+			// fmt.Println("Warning: Unknown filter key", key)
+		}
+	}
+
+	return filterObj
+}
 
 func Setup() error {
 	return CreateBucket()
@@ -43,8 +112,8 @@ func StopCurrentTask(taskID *int) (string, error) {
 		}
 		task = item
 	} else {
-		filterObj := Task{Status: TaskStatus(ONGOING)}
-		tasks, err := FindTasks(filterObj)
+		filterObj := FilterObject{Status: TaskStatus(ONGOING)}
+		tasks, err := FilterTasks(filterObj)
 		if err != nil {
 			return "", err
 		}
@@ -79,8 +148,8 @@ func PauseCurrentTask(taskID *int) (string, error) {
 		task = item
 	} else {
 
-		filterObj := Task{Status: TaskStatus(ONGOING)}
-		tasks, err := FindTasks(filterObj)
+		filterObj := FilterObject{Status: TaskStatus(ONGOING)}
+		tasks, err := FilterTasks(filterObj)
 		if err != nil {
 			return "", err
 		}
@@ -111,11 +180,11 @@ func ContinuePausedTask(taskName *string, taskID *int) (string, error) {
 		}
 		task = item
 	} else {
-		filterObj := Task{
+		filterObj := FilterObject{
 			Name:   *taskName,
 			Status: TaskStatus(PAUSED),
 		}
-		tasks, err := FindTasks(filterObj)
+		tasks, err := FilterTasks(filterObj)
 		if err != nil {
 			return "", err
 		}
@@ -132,27 +201,23 @@ func ContinuePausedTask(taskName *string, taskID *int) (string, error) {
 	return "", UpdateTask(&task)
 }
 
-func Status(status string) (string, error) {
-	statusMap := map[string]TaskStatus{
-		"ongoing":   TaskStatus(ONGOING),
-		"completed": TaskStatus(COMPLETED),
-		"paused":    TaskStatus(PAUSED),
-	}
-	filterObj := Task{
-		Status: statusMap[status],
-	}
-	tasks, err := FindTasks(filterObj)
+func Status(filter *FilterObject) ([][]string, error) {
+	tasks, err := FilterTasks(*filter)
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+	if len(tasks) == 0 && filter.Status == TaskStatus(ONGOING) {
+		return nil, fmt.Errorf("No current time tracking session\n")
 	}
 	if len(tasks) == 0 {
-		return fmt.Sprintf("There are no %s tasks\n", status), nil
+		return nil, fmt.Errorf(NO_FILTER_RESULT_ERR_MSG)
 	}
-	return FormatMultipleTaskStatus(tasks), nil
+	return ParseIntoRows(tasks), nil
 }
 
 func GenerateReport(startDate, endDate int64) (string, error) {
-	tasks, err := FilterTasks(&startDate, &endDate, nil, nil)
+	filterObj := FilterObject{StartDate: startDate, EndDate: endDate}
+	tasks, err := FilterTasks(filterObj)
 	if err != nil {
 		return "", err
 	}

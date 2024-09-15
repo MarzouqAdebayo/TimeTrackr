@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	continueCmd.Flags().IntVar(&idVar, "id", 0, "")
+	continueCmd.Flags().IntVar(&idVar, "id", 0, "specific task ID. Usage `trackr continue --id=1`")
 	rootCmd.AddCommand(continueCmd)
 }
 

@@ -3,6 +3,7 @@ package boltdb
 import (
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -178,6 +179,32 @@ func MostFrequentTaskName(tasks []Task) string {
 
 func FindLongestStreak() string { return "" }
 
+func ParseIntoRows(tasks []Task) [][]string {
+	rows := make([][]string, 0, len(tasks))
+	for _, v := range tasks {
+		id := fmt.Sprintf("%d", v.ID)
+		name := v.Name
+		status := string(v.Status)
+		category := v.Category
+		duration := FormatDuration(v.Duration)
+		// startTime := FormatDate(v.StartTime)
+		// updatedAt := FormatDate(v.UpdatedAt)
+		// endTime := FormatDate(v.EndTime)
+
+		row := []string{
+			strings.Trim(id, " \n\t"),
+			strings.Trim(name, " \n\t"),
+			strings.Trim(status, " \n\t"),
+			strings.Trim(category, " \n\t"),
+			strings.Trim(duration, " \n\t")}
+		// strings.Trim(startTime, " \n\t"),
+		// strings.Trim(updatedAt, " \n\t"),
+		// strings.Trim(endTime, "\n\t")}
+		rows = append(rows, row)
+	}
+	return rows
+}
+
 func FormatMultipleTaskStatus(tasks []Task) string {
 	result := ""
 	for _, task := range tasks {
@@ -241,25 +268,104 @@ func FormatTasksNamesAndIDs(tasks []Task) string {
 	return result
 }
 
+func FormatDate(d int64) string {
+	return time.Unix(d, 0).Format("01-02-2006 03:04 PM")
+}
+
 func FormatDuration(d int64) string {
 	hours := d / 3600
 	minutes := (d % 3600) / 60
 	seconds := d % 60
 
-	hourStr := "hours"
-	if hours == 1 {
-		hourStr = "hour"
+	return fmt.Sprintf("%d:%d:%d\n", hours, minutes, seconds)
+}
+
+func ParseDateCommand(startDateStr, endDateStr string) (int64, int64, error) {
+	loc := time.Local
+
+	var startTimestamp int64
+	if startDateStr == "" {
+		startTimestamp = 0
+	} else {
+		startDate, err := parseDateWithTimezone(startDateStr, loc)
+		if err != nil {
+			return 0, 0, fmt.Errorf("Invalid start date format. Please use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS")
+		}
+		startTimestamp = startDate.Unix()
 	}
 
-	minuteStr := "minutes"
-	if minutes == 1 {
-		minuteStr = "minute"
+	var endTimestamp int64
+	if endDateStr == "" {
+		endTimestamp = time.Now().In(loc).Unix()
+	} else {
+		endDate, err := parseDateWithTimezone(endDateStr, loc)
+		if err != nil {
+			return 0, 0, fmt.Errorf("Invalid end date format. Please use 'YYYY-MM-DD' or 'DD-MM-YYYY' or 'YYYY-MM-DD' or 'DD-MM-YYYY HH:MM' or 'HH:MM AM/PM'")
+		}
+		endTimestamp = endDate.Unix()
 	}
 
-	secondStr := "seconds"
-	if seconds == 1 {
-		secondStr = "second"
+	if startTimestamp >= endTimestamp {
+		return 0, 0, fmt.Errorf("Error: Start date must be before end date")
 	}
 
-	return fmt.Sprintf("%d %s %d %s %d %s", hours, hourStr, minutes, minuteStr, seconds, secondStr)
+	if startTimestamp >= endTimestamp {
+		return 0, 0, fmt.Errorf("Error: Start date must be before end date")
+	}
+	return startTimestamp, endTimestamp, nil
+}
+
+func parseDateWithTimezone(dateStr string, loc *time.Location) (time.Time, error) {
+	layouts := []string{
+		"02-01-2006",
+		"2006-01-02",
+		"02-01-2006 15:04",
+		"2006-01-02 15:04",
+		"02-01-2006 03:04 PM",
+		"2006-01-02 03:04 PM",
+	}
+	var parsedDate time.Time
+	var err error
+	for _, layout := range layouts {
+		parsedDate, err = time.ParseInLocation(layout, dateStr, loc)
+		if err == nil {
+			return parsedDate, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("Invalid date format")
+}
+
+func DurationParser(durationStr string) (int64, error) {
+	var duration int64
+
+	i := 0
+	cursor := 0
+	for i < len(durationStr) {
+		char := durationStr[i]
+		switch char {
+		case 'h', 'H':
+			hours, err := strconv.ParseInt(durationStr[cursor:i], 10, 64)
+			if err != nil {
+				return 0, fmt.Errorf("Invalid duration format. Use '2h3m30s' or '2H3M30S'")
+			}
+			duration += hours * 3600
+			cursor = i + 1
+		case 'm', 'M':
+			minutes, err := strconv.ParseInt(durationStr[cursor:i], 10, 64)
+			if err != nil {
+				return 0, fmt.Errorf("Invalid duration format. Use '2h3m30s' or '2H3M30S'")
+			}
+			duration += minutes * 60
+			cursor = i + 1
+		case 's', 'S':
+			seconds, err := strconv.ParseInt(durationStr[cursor:i], 10, 64)
+			if err != nil {
+				return 0, fmt.Errorf("Invalid duration format. Use '2h3m30s' or '2H3M30S'")
+			}
+			duration += seconds
+			cursor = i + 1
+		}
+		i++
+	}
+	return duration, nil
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func TestStatusCmd(t *testing.T) {
+func TestFilterCmd(t *testing.T) {
 	t.Run("status - Should print appropriate command when passed", func(t *testing.T) {
 		buf := bytes.Buffer{}
 		args := []string{"task1"}

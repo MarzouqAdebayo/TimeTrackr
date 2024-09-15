@@ -14,7 +14,7 @@ import (
 var fileName = "trackr.db"
 var bucketName = []byte("task")
 
-var ErrTaskNotFound = errors.New("task not found")
+var ErrTaskNotFound = errors.New("task(s) not found")
 var ErrBucketDoesNotExist = errors.New("bucket does not exist")
 
 type CustomErr string
@@ -73,37 +73,6 @@ func OngoingExists() error {
 		return err
 	}
 	return nil
-}
-
-func FindTasks(obj Task) ([]Task, error) {
-	db := opendb()
-	defer db.Close()
-
-	var matchingTasks []Task
-	err := db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(bucketName)
-		if bucket == nil {
-			return fmt.Errorf("Please run trackr setup to start using TimeTrackr")
-		}
-		c := bucket.Cursor()
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			var task Task
-			err := json.Unmarshal(v, &task)
-			if err != nil {
-				return err
-			}
-			if (obj.Name == "" || task.Name == obj.Name) &&
-				(obj.Category == "" || task.Category == obj.Category) &&
-				(obj.Status == "" || task.Status == obj.Status) {
-				matchingTasks = append(matchingTasks, task)
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return matchingTasks, err
-	}
-	return matchingTasks, nil
 }
 
 func SaveTask(task *Task) error {
@@ -189,7 +158,7 @@ func GetTask(taskID int) (Task, error) {
 	return task, nil
 }
 
-func FilterTasks(startDate, endDate *int64, minDuration, maxDuration *int64) ([]Task, error) {
+func FilterTasks(obj FilterObject) ([]Task, error) {
 	db := opendb()
 	defer db.Close()
 
@@ -206,10 +175,13 @@ func FilterTasks(startDate, endDate *int64, minDuration, maxDuration *int64) ([]
 			if err != nil {
 				return err
 			}
-			if (startDate == nil || task.StartTime >= *startDate) &&
-				(endDate == nil || task.EndTime <= *endDate) &&
-				(minDuration == nil || task.Duration >= *minDuration) &&
-				(maxDuration == nil || task.Duration <= *maxDuration) {
+			if (obj.Name == "" || task.Name == obj.Name) &&
+				(obj.Category == "" || task.Category == obj.Category) &&
+				(obj.Status == "" || task.Status == obj.Status) &&
+				(obj.StartDate == 0 || task.StartTime >= obj.StartDate) &&
+				(obj.EndDate == 0 || task.EndTime <= obj.EndDate) &&
+				(obj.MinDuration == 0 || task.Duration >= obj.MinDuration) &&
+				(obj.MaxDuration == 0 || task.Duration <= obj.MaxDuration) {
 				matchingTasks = append(matchingTasks, task)
 			}
 		}
@@ -217,9 +189,6 @@ func FilterTasks(startDate, endDate *int64, minDuration, maxDuration *int64) ([]
 	})
 	if err != nil {
 		return matchingTasks, err
-	}
-	if len(matchingTasks) == 0 {
-		return nil, ErrTaskNotFound
 	}
 	return matchingTasks, nil
 }

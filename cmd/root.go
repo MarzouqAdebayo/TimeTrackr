@@ -14,13 +14,22 @@ var (
 	all     bool
 )
 
+const ASCIIART = `
+████████╗██████╗  █████╗  ██████╗██╗  ██╗██████╗ 
+╚══██╔══╝██╔══██╗██╔══██╗██╔════╝██║ ██╔╝██╔══██╗
+   ██║   ██████╔╝███████║██║     █████╔╝ ██████╔╝
+   ██║   ██╔══██╗██╔══██║██║     ██╔═██╗ ██╔══██╗
+   ██║   ██║  ██║██║  ██║╚██████╗██║  ██╗██║  ██║
+   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝
+  `
+
 var rootCmd = &cobra.Command{
 	Use:   "trackr",
-	Short: "trackr is a time tracking tool",
-	Long: `trackr is a CLI time tracking tool to 
-  help manage the time you spend on tasks`,
+	Short: "Trackr is a time tracking tool",
+	Long:  `Trackr is a CLI time tracking tool to help manage the time you spend on tasks`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Print("Welcome to TimeTrackr, use trackr --help to get started")
+		cmd.Println(ASCIIART)
+		cmd.Println("Welcome to TimeTrackr, use trackr --help to get started")
 	},
 }
 

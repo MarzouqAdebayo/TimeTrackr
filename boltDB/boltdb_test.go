@@ -32,7 +32,7 @@ func TestFindTasks(t *testing.T) {
 			Category: "sports",
 		}
 		fmt.Println("saved")
-		tasks, err := FindTasks(findParams)
+		tasks, err := FilterTasks(findParams)
 		if err != nil {
 			t.Errorf("%q\n", err.Error())
 		}
