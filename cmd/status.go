@@ -8,6 +8,7 @@ import (
 )
 
 func init() {
+	statusCmd.Flags().IntVar(&idVar, "id", 0, "View a specific tracking session by ID")
 	rootCmd.AddCommand(statusCmd)
 }
 
@@ -19,20 +20,17 @@ If a timer is currently running, it will automatically stop that timer and save 
 Use this command to accurately track the time spent on each activity throughout your day.`,
 	Args: cobra.ExactArgs(0),
 	Run: func(cmd *cobra.Command, args []string) {
-		filters := boltdb.FilterObject{
-			Status: boltdb.TaskStatus(boltdb.ONGOING),
+		var result string
+		var err error
+		if idVar <= 0 {
+			result, err = boltdb.Status(nil)
+		} else {
+			result, err = boltdb.Status(&idVar)
 		}
-		// singleResult, err = boltdb.GetTask(idVar)
-		multipleResult, err := boltdb.Status(&filters)
 		if err != nil {
 			cmd.Println(err.Error())
 			return
 		}
-		if len(multipleResult) == 1 {
-			// TODO Print single task ui here
-			cmd.Println(ui.PrintTaskList(multipleResult))
-		} else {
-			cmd.Println(ui.PrintTaskList(multipleResult))
-		}
+		cmd.Println(ui.PrintTask(result))
 	},
 }

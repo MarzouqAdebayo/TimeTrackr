@@ -201,18 +201,37 @@ func ContinuePausedTask(taskName *string, taskID *int) (string, error) {
 	return "", UpdateTask(&task)
 }
 
-func Status(filter *FilterObject) ([][]string, error) {
+func Filter(filter *FilterObject) ([][]string, error) {
 	tasks, err := FilterTasks(*filter)
 	if err != nil {
 		return nil, err
-	}
-	if len(tasks) == 0 && filter.Status == TaskStatus(ONGOING) {
-		return nil, fmt.Errorf("No current time tracking session\n")
 	}
 	if len(tasks) == 0 {
 		return nil, fmt.Errorf(NO_FILTER_RESULT_ERR_MSG)
 	}
 	return ParseIntoRows(tasks), nil
+}
+
+func Status(id *int) (string, error) {
+	if id != nil {
+		task, err := GetTask(*id)
+		if err != nil {
+			return "", err
+		}
+		return FormatTaskStatus(task), nil
+	} else {
+		filter := FilterObject{
+			Status: TaskStatus(ONGOING),
+		}
+		tasks, err := FilterTasks(filter)
+		if err != nil {
+			return "", err
+		}
+		if len(tasks) == 0 {
+			return "", fmt.Errorf("No current time tracking session\n")
+		}
+		return FormatTaskStatus(tasks[0]), nil
+	}
 }
 
 func GenerateReport(startDate, endDate int64) (string, error) {

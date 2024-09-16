@@ -27,7 +27,7 @@ func TestStopCurrentTask(t *testing.T) {
 
 func TestTaskStatus(t *testing.T) {
 	t.Run("Get the status of the currently running task", func(t *testing.T) {
-		_, err := Status("ongoing")
+		_, err := Filter("ongoing")
 
 		if err != nil {
 			// t.Error("Error: Could not fetch task status")

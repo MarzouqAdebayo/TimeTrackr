@@ -11,9 +11,10 @@ import (
 func init() {
 	rootCmd.AddCommand(filterCmd)
 	filterCmd.Flags().IntVar(&idVar, "id", 0, "specific task ID. Usage `trackr status --id=1`")
+	filterCmd.Flags().BoolP("all", "a", false, "gets all tasks. This flag overrides all other flags")
 	filterCmd.Flags().StringP("status", "s", "", "filter by status")
 	filterCmd.Flags().StringP("category", "c", "", "filter by category")
-	filterCmd.Flags().StringP("name", "n", "", "filter by name")
+	filterCmd.Flags().StringP("name", "n", "", "filter by name. Usage `trackr status -n=one`")
 	filterCmd.Flags().String("startdate", "", "filter by start date (e.g., 2024-09-01 or 2024-09-01 15:04:05)")
 	filterCmd.Flags().String("enddate", "", "filter by end date (e.g., 2024-09-01 or 2024-09-01 15:04:05)")
 	filterCmd.Flags().String("minDuration", "", "filter by min duration (e.g., 2h3m30s or 2H3M30S)")
@@ -30,6 +31,12 @@ Use this command to accurately track the time spent on each activity throughout 
 	Run: func(cmd *cobra.Command, args []string) {
 		// var singleResult string
 		var multipleResult [][]string
+
+		all, err := cmd.Flags().GetBool("all")
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
 
 		name, err := cmd.Flags().GetString("name")
 		if err != nil {
@@ -100,14 +107,15 @@ Use this command to accurately track the time spent on each activity throughout 
 			MinDuration: minDurationTm,
 			MaxDuration: maxDurationTm,
 		}
-
-		fmt.Printf("filters: %+v\n", filters)
+		if all {
+			filters = boltdb.FilterObject{}
+		}
 
 		if idVar <= 0 {
-			multipleResult, err = boltdb.Status(&filters)
+			multipleResult, err = boltdb.Filter(&filters)
 		} else {
 			// singleResult, err = boltdb.GetTask(idVar)
-			multipleResult, err = boltdb.Status(&filters)
+			multipleResult, err = boltdb.Filter(&filters)
 		}
 		if err != nil {
 			cmd.Println(err.Error())
