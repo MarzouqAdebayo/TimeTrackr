@@ -4,6 +4,7 @@ TimeTrackr is a command-line application build with GO and designed to help user
 
 ![cli screenshot 1](assets/timetrackr1ss.png "TimeTrackr Image")
 ![cli screenshot 2](assets/timetrackr2ss.png "TimeTrackr Image")
+![cli screenshot 2](assets/timetrackr3ss.png "TimeTrackr Web Interface Image")
 
 ## Introduction
 
