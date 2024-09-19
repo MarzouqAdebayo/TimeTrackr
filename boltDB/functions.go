@@ -89,6 +89,12 @@ func StartTask(taskName string, category string) error {
 	if ongoingErr != nil {
 		return ongoingErr
 	}
+	if len(taskName) > 20 {
+		return fmt.Errorf("Task name length can not be greater than 20 characters")
+	}
+	if len(category) > 20 {
+		return fmt.Errorf("Task category length can not be greater than 20 characters")
+	}
 	newTask := &Task{
 		Name:      taskName,
 		Category:  category,
