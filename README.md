@@ -90,13 +90,6 @@ Contributions are welcome! To contribute:
 3. Commit your changes.
 4. Push your branch and create a pull request.
 
-## Related Projects
-
-If you're interested in other productivity tools, you might want to check out:
-
-- Taskwarrior
-- Todo.txt CLI
-
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details
